@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>과제 작성 도우미</title>
+    <!-- 외부 CSS 파일 연결 -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/assignmenthelper.css') }}">
+</head>
+
+<body>
+    <div class="container">
+        <div class="left-panel">
+            <h2>텍스트 입력</h2>
+            <div class="input-section">
+                <textarea id="inputText" placeholder="여기에 과제 내용을 입력하세요..."></textarea>
+                <div class="word-count">단어 수: <span id="wordCount">0</span> / 글자 수: <span id="charCount">0</span></div>
+            </div>
+        </div>
+
+        <div class="right-panel">
+            <div class="controls">
+                <h3>분석 설정</h3>
+                <select id="styleSelect">
+                    <option value="">글쓰기 분석 목적 선택</option>
+                    <option value="academic">학술적</option>
+                    <option value="logical">논리적</option>
+                    <option value="casual">일상적</option>
+                    <option value="professional">전문적</option>
+                    <option value="creative">창의적</option>
+                </select>
+
+                <h4>제안 방법</h4>
+                <div>
+                    <label>
+                        <input type="checkbox" value="formal" id="suggestionFormal"> 주제 명료화
+                    </label>
+                </div>
+                <div>
+                    <label>
+                        <input type="checkbox" value="semiformal" id="suggestionSemiformal"> 목적 정의
+                    </label>
+                </div>
+                <div>
+                    <label>
+                        <input type="checkbox" value="semiformal" id="suggestionDepth"> 정보의 깊이
+                    </label>
+                </div>
+                <div>
+                    <label>
+                        <input type="checkbox" value="semiformal" id="suggestionFlow"> 구성 및 흐름
+                    </label>
+                </div>
+                <div>
+                    <label>
+                        <input type="checkbox" value="semiformal" id="suggestionTone"> 문체 및 어조
+                    </label>
+                </div>
+                <div>
+                    <label>
+                        <input type="checkbox" value="informal" id="suggestionSymbolism"> 상징 및 비유 사용
+                    </label>
+                </div>
+                <div>
+                    <label>
+                        <input type="checkbox" value="informal" id="suggestionArgument"> 주장 및 근거
+                    </label>
+                </div>
+                <div>
+                    <label>
+                        <input type="checkbox" value="informal" id="suggestionGrammar"> 문법 및 스타일 점검
+                    </label>
+                </div>
+                <div>
+                    <label>
+                        <input type="checkbox" value="informal" id="suggestionConclusion"> 결론의 강도
+                    </label>
+                </div>
+
+                <button id="analyzeBtn">분석 시작</button>
+            </div>
+
+            <div class="analysis-section">
+                <div class="tabs">
+                    <button class="tab active" data-tab="summary">요약</button>
+                    <button class="tab" data-tab="suggestions">제안</button>
+                    <button class="tab" data-tab="structure">구조</button>
+                    <button class="tab" data-tab="grammar">문법</button>
+                </div>
+
+                <div id="summary" class="tab-content active">
+                    텍스트 요약이 여기에 표시됩니다.
+                </div>
+                <div id="suggestions" class="tab-content">
+                    개선 제안이 여기에 표시됩니다.
+                </div>
+                <div id="structure" class="tab-content">
+                    구조 분석이 여기에 표시됩니다.
+                </div>
+                <div id="grammar" class="tab-content">
+                    문법 검사 결과가 여기에 표시됩니다.
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 외부 JS 파일 연결 -->
+    <script src="{{ url_for('static', filename='js/assignmenthelper.js') }}"></script>
+</body>
+
+</html>

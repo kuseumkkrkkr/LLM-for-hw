@@ -1,0 +1,169 @@
+from flask import Flask, render_template, Response, request, jsonify
+from google import genai #AI 호출
+from pydantic import BaseModel #baseline 모델 활용(최적화화)
+from typing import List
+import json
+from hanspell import spell_checker
+
+#이거 제발 없애지마================================
+app = Flask(__name__)
+@app.route('/')
+def index():
+    return render_template('index.html')
+
+@app.route('/assignmenthelper')
+def assignmenthelper():
+    return render_template('assignmenthelper.html')
+#=================================================
+
+
+
+#================================================= 프롬포트를 구성하는 클래스
+#이 부분을 확장하여 다른 응답도 받아볼 수 있음
+#이상한거 쳐넣지마 제발
+#=================================================
+class Summary(BaseModel):
+    text: str #요약
+
+class ImprovementSuggestions(BaseModel):
+    suggestions: List[str] #개선요청사항
+
+class StructureAnalysis(BaseModel):
+    description: str  # 문장 구조 분석을 자연어 문장으로 제공
+
+class TextAnalysis(BaseModel): #없어지면 안되는 코드 이거 죽이면 안됨
+    summary: Summary
+    improvement_suggestions: ImprovementSuggestions
+    structure_analysis: StructureAnalysis
+#=================================================
+#API 키 유출하면 죽는다
+client = genai.Client(api_key="AIzaSyD_9V2Yk8nflCNbIi7UIaFaulDv3OO14_s")
+#=================================================
+# 수정가능한 또다른 부분, 아래쪽애 프롬포트 구성만 바꾸셈
+# 다른 코드 건드리면 작동안함
+#=================================================
+#Gemini API 호출&질의응답 처리구간
+@app.route('/getchat')
+def getchat():
+    print("api 에 접근함")
+    question = request.args.get('question', '').strip()
+    if not question:
+        return jsonify({"error": "No text provided"}), 400
+#================================================= Get 요청
+    
+#================================================= 체크박스에서 프롬포트를 불러와 로딩하는 과정
+
+    selected_tones_str = request.args.get('selected_tones', '').strip()
+    selected_tones = selected_tones_str.split(',') if selected_tones_str else []
+
+
+#메인 프롬포트 라인 ================================
+#프롬포트가 추가되는 과정 : 체크박스가 2개 체크되어있다 그러면 ,상징 및 비유 사용을 고려해야 합니다 + 문법 점검이 필요합니다 이렇게 추가됨
+#프롬포트를 수정해서 강화할 수 있음
+#=================================================
+    tone_prompts = {
+        'formal': ' - 주제 명료화가 필요합니다.',
+        'semiformal': ' - 목적 정의가 부족합니다.',
+        'depth': ' - 정보의 깊이가 부족합니다.',
+        'flow': ' - 구성 및 흐름이 자연스럽지 않습니다.',
+        'tone': ' - 문체 및 어조를 개선해야 합니다.',
+        'symbolism': ' - 상징 및 비유 사용을 고려해야 합니다.',
+        'argument': ' - 주장 및 근거를 강화해야 합니다.',
+        'grammar': ' - 문법 점검이 필요합니다.',
+        'conclusion': ' - 결론을 강하게 만들어야 합니다.'
+    }
+#=================================================
+#=================================================
+
+  
+
+#프롬포트 파싱 라인 ================================
+    additional_suggestions = [] #이 배열 안으로 프롬포트가 합쳐져서 들어가고 있음
+    for tone in selected_tones:
+        if tone in tone_prompts:
+            additional_suggestions.append(tone_prompts[tone]) #배열 append 함수
+    additional_prompt = "\n추가 개선사항:\n" + "\n".join(additional_suggestions) if additional_suggestions else "" 
+#이 바로 위에가 프롬포트 덧셈하는 과정이긴함
+#=================================================
+
+
+#================================================= 프롬포트 구성 (대화형 프롬포트 이 부분 수정)
+    prompt = f"""
+    Analyze the following text and provide the summary, improvement suggestions, and structure analysis in JSON format. 
+    The structure analysis should be in natural language, describing paragraph count, sentence count, and types of sentences in a concise way:
+    Use Korean language:
+    "{question}" 
+    {additional_prompt}
+    """
+#================================================= 
+# 여기 이 프롬포트가 지금 모델에 들어가는 프롬포트임
+# 저거 보면 JSON 포맷으로 제공하라 되어있는데 저 포맷으로 안나오게 되면 클래스 안에 다른게 들어가게되고 그때부터 꼬임
+# 두번째 문장이 이제 문단 분석이라고 보면 됨
+# 수정요령 : 클래스 + JSON 포맷으로 시키기, 아랫문장에 클래스의 상세 기능동작을 묘사한다 생각하면 편함
+# Question 이거 뽑아버리면 지시가 안들어간다는 이야기임 뽑으면 안됨됨
+#================================================= 모델 호출
+    try:
+        response = client.models.generate_content(
+            model="gemini-2.0-flash", #모델명
+            contents=prompt, #프롬포트
+            config={ 
+                "response_mime_type": "application/json", #응답형식(현재는json)
+                "response_schema": TextAnalysis, #클래스명명
+            }, 
+        )
+# 모델 핵심 파라미터=================================
+# 모델 종류 수정가능
+# 그 밑에꺼가 프롬포트 구성을 보내는부분임, 수정금지지
+#================================================================================
+# 응답에서 parsed 속성으로 결과 추출 및 디코딩 처리 (이거 죽이면 우리 한글이 아니라 바이트코드로 나와 ㅅㅂ)
+        if isinstance(response.parsed, bytes):
+            decoded_response = response.parsed.decode('utf-8')
+            analysis_result = json.loads(decoded_response) #UTF-8 인코딩, 바이트코드로 처리중임 까보면면
+        else:
+            analysis_result = response.parsed.dict()
+
+        json_str = json.dumps(analysis_result, ensure_ascii=False)
+        return Response(json_str, mimetype='application/json')
+
+    except Exception as e:
+        print(f"Error occurred: {e}")
+        error_json = json.dumps({"error": "Failed to get a valid response from the API"}, ensure_ascii=False)
+        return Response(error_json, status=500, mimetype='application/json')
+#================================================= 코드끝
+
+
+#문법 검사 함수=================================================
+@app.route('/getgrammar', methods=['POST']) #포스트 요청 (다른 방법 바꾸지마)
+def get_grammar():
+    try:
+        data = request.get_json()
+        question = data.get('question', '').strip()
+
+        if not question:
+            return jsonify({"error": "No text provided"}), 400
+
+        print(f'받은 질문: {question}')  # 콘솔에 출력
+        
+        # hanspell을 사용하여 맞춤법 검사
+        print("입력 문장:", question)
+        spelled = spell_checker.check(question)
+        print("hanspell 결과:", spelled.as_dict())
+        grammar_analysis = {
+            "checked": spelled.checked,  # 수정된 문장
+            "errors": spelled.errors     # 오류 개수
+        }
+
+        print("grammar_analysis:", grammar_analysis)
+        return jsonify({"grammar_analysis": grammar_analysis})
+
+    except Exception as e:
+        print(f"Error occurred: {e}")
+        return jsonify({"error": "Grammar check failed"}), 500
+
+# 밑에 이부분 없애면 아예 Run 실행이 안됨됨
+if __name__ == '__main__':
+    app.run(debug=True)
+
+
+#https://cw202080.pythonanywhere.com/ 
+#웹 배포중

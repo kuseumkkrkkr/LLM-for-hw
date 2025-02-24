@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AI HOMEWORK ASSISTANT</title>
+  <!-- 구글 폰트 & Font Awesome -->
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;700&display=swap" rel="stylesheet">
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+  <!-- 메인 스타일시트 -->
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/main.css') }}">
+</head>
+<body>
+  <!-- 사이드바 -->
+  <div class="sidebar">
+    <div class="sidebar-header">
+      <span class="sidebar-title">AI HOMEWORK ASSISTANT</span>
+      <i class="fas fa-times" onclick="toggleSidebar()" style="cursor: pointer;"></i>
+    </div>
+    <ul class="project-list">
+      <li class="project-item active" onclick="showProject('assignmenthelper', event)">과제 검토</li>
+      <!--<li class="project-item" onclick="showProject('project2', event)">프로젝트 2</li>-->
+      <!--<li class="project-item" onclick="showProject('project3', event)">프로젝트 3</li>-->
+      <!--<li class="project-item" onclick="showProject('project4', event)">프로젝트 4</li>-->
+    </ul>
+  </div>
+
+  <!-- 메인 콘텐츠 (iframe 영역) -->
+  <div class="main-content">
+    <button class="toggle-btn" onclick="toggleSidebar()">
+      <i class="fas fa-bars"></i>
+    </button>
+    <!-- 기본으로 assignmenthelper 페이지를 로드 -->
+    <iframe id="projectFrame" class="project-iframe" src="{{ url_for('assignmenthelper') }}"></iframe>
+  </div>
+
+  <!-- 메인 스크립트 -->
+  <script src="{{ url_for('static', filename='js/main.js') }}"></script>
+  <script>
+    // 프로젝트 라우트 매핑 (Flask 라우트를 사용)
+    const projectRoutes = {
+      'assignmenthelper': "{{ url_for('assignmenthelper') }}",
+    };
+
+    function toggleSidebar() {
+      const sidebar = document.querySelector('.sidebar');
+      const mainContent = document.querySelector('.main-content');
+      sidebar.classList.toggle('hidden');
+      mainContent.classList.toggle('full');
+    }
+
+    function showProject(projectId, event) {
+      // 모든 프로젝트 항목에서 active 클래스 제거
+      document.querySelectorAll('.project-item').forEach(item => {
+        item.classList.remove('active');
+      });
+      // 클릭한 항목에 active 클래스 추가
+      event.target.classList.add('active');
+
+      // iframe 소스 업데이트 (Flask 라우트를 사용)
+      const projectFrame = document.getElementById('projectFrame');
+      projectFrame.src = projectRoutes[projectId];
+    }
+  </script>
+</body>
+</html>
