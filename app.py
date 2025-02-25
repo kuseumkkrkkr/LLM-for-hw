@@ -3,7 +3,6 @@ from google import genai #AI 호출
 from pydantic import BaseModel #baseline 모델 활용(최적화화)
 from typing import List
 import json
-from hanspell import spell_checker
 
 #이거 제발 없애지마================================
 app = Flask(__name__)
@@ -14,6 +13,10 @@ def index():
 @app.route('/assignmenthelper')
 def assignmenthelper():
     return render_template('assignmenthelper.html')
+
+@app.route('/ppt')
+def ppt():
+    return render_template('ppt.html')
 #=================================================
 
 
@@ -47,20 +50,21 @@ client = genai.Client(api_key="AIzaSyD_9V2Yk8nflCNbIi7UIaFaulDv3OO14_s")
 def getchat():
     print("api 에 접근함")
     question = request.args.get('question', '').strip()
+    style = request.args.get('style', '').strip()
     if not question:
         return jsonify({"error": "No text provided"}), 400
 #================================================= Get 요청
-    
 #================================================= 체크박스에서 프롬포트를 불러와 로딩하는 과정
 
     selected_tones_str = request.args.get('selected_tones', '').strip()
-    selected_tones = selected_tones_str.split(',') if selected_tones_str else []
-
+    print(f"Received selected_tones: {selected_tones_str}")
+    selected_tones = list(set(selected_tones_str.split(','))) if selected_tones_str else []
+    print(f"Selected tones: {selected_tones}")
 
 #메인 프롬포트 라인 ================================
 #프롬포트가 추가되는 과정 : 체크박스가 2개 체크되어있다 그러면 ,상징 및 비유 사용을 고려해야 합니다 + 문법 점검이 필요합니다 이렇게 추가됨
 #프롬포트를 수정해서 강화할 수 있음
-#=================================================
+#================================================= 이건 톤 프롬포트
     tone_prompts = {
         'formal': ' - 주제 명료화가 필요합니다.',
         'semiformal': ' - 목적 정의가 부족합니다.',
@@ -71,31 +75,47 @@ def getchat():
         'argument': ' - 주장 및 근거를 강화해야 합니다.',
         'grammar': ' - 문법 점검이 필요합니다.',
         'conclusion': ' - 결론을 강하게 만들어야 합니다.'
+    } #아니 html에 있는 파라미터는 하나도 안바꿔놔서 키워드가 안먹힘.. 해결완료 제로해진다?
+    #value 값 조심부탁
+#================================================= 이건 요약부 프롬포트
+
+    summary_prompts = {
+        'academic': ' - 요약에서 핵심적인 이론과 데이터를 명확하게 제시하세요.',
+        'logical': ' - 요약에서 주장을 논리적으로 연결하고 근거를 제시하세요.',
+        'casual': ' - 요약에서 간결하고 쉽게 이해할 수 있는 언어를 사용하세요.',
+        'professional': ' - 요약에서 전문적인 용어를 사용하고 정확성을 유지하세요.',
+        'creative': ' - 요약에서 창의적인 관점을 강조하고 색다른 접근을 보여주세요.'
     }
-#=================================================
+
+    summary_prompts = summary_prompts.get(style, ' - 기본적인 요약을 제공하세요.') #style 변수 없애면 아무것도 안들어와짐
+
 #=================================================
 
-  
+
 
 #프롬포트 파싱 라인 ================================
     additional_suggestions = [] #이 배열 안으로 프롬포트가 합쳐져서 들어가고 있음
     for tone in selected_tones:
         if tone in tone_prompts:
             additional_suggestions.append(tone_prompts[tone]) #배열 append 함수
-    additional_prompt = "\n추가 개선사항:\n" + "\n".join(additional_suggestions) if additional_suggestions else "" 
+    additional_prompt = "\n추가 개선사항:\n" + "\n".join(additional_suggestions) if additional_suggestions else ""
+    print(additional_prompt)
 #이 바로 위에가 프롬포트 덧셈하는 과정이긴함
 #=================================================
 
 
 #================================================= 프롬포트 구성 (대화형 프롬포트 이 부분 수정)
     prompt = f"""
-    Analyze the following text and provide the summary, improvement suggestions, and structure analysis in JSON format. 
+    Analyze the following text and provide the summary, improvement suggestions, and structure analysis in JSON format.
     The structure analysis should be in natural language, describing paragraph count, sentence count, and types of sentences in a concise way:
     Use Korean language:
-    "{question}" 
+    "{question}"
     {additional_prompt}
+    {summary_prompts}
     """
-#================================================= 
+
+    print(f"Generated prompt: {summary_prompts}{additional_prompt}")    #디버그 코드
+#=================================================
 # 여기 이 프롬포트가 지금 모델에 들어가는 프롬포트임
 # 저거 보면 JSON 포맷으로 제공하라 되어있는데 저 포맷으로 안나오게 되면 클래스 안에 다른게 들어가게되고 그때부터 꼬임
 # 두번째 문장이 이제 문단 분석이라고 보면 됨
@@ -106,10 +126,10 @@ def getchat():
         response = client.models.generate_content(
             model="gemini-2.0-flash", #모델명
             contents=prompt, #프롬포트
-            config={ 
+            config={
                 "response_mime_type": "application/json", #응답형식(현재는json)
                 "response_schema": TextAnalysis, #클래스명명
-            }, 
+            },
         )
 # 모델 핵심 파라미터=================================
 # 모델 종류 수정가능
@@ -133,37 +153,12 @@ def getchat():
 
 
 #문법 검사 함수=================================================
-@app.route('/getgrammar', methods=['POST']) #포스트 요청 (다른 방법 바꾸지마)
-def get_grammar():
-    try:
-        data = request.get_json()
-        question = data.get('question', '').strip()
 
-        if not question:
-            return jsonify({"error": "No text provided"}), 400
-
-        print(f'받은 질문: {question}')  # 콘솔에 출력
-        
-        # hanspell을 사용하여 맞춤법 검사
-        print("입력 문장:", question)
-        spelled = spell_checker.check(question)
-        print("hanspell 결과:", spelled.as_dict())
-        grammar_analysis = {
-            "checked": spelled.checked,  # 수정된 문장
-            "errors": spelled.errors     # 오류 개수
-        }
-
-        print("grammar_analysis:", grammar_analysis)
-        return jsonify({"grammar_analysis": grammar_analysis})
-
-    except Exception as e:
-        print(f"Error occurred: {e}")
-        return jsonify({"error": "Grammar check failed"}), 500
 
 # 밑에 이부분 없애면 아예 Run 실행이 안됨됨
 if __name__ == '__main__':
     app.run(debug=True)
 
 
-#https://cw202080.pythonanywhere.com/ 
+#https://cw202080.pythonanywhere.com/
 #웹 배포중

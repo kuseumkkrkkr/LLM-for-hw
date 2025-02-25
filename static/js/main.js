@@ -23,8 +23,8 @@ function toggleSidebar() {
       case 'assignmenthelper':
         projectFrame.src = 'assignmenthelper.html';
         break;
-      case 'project2':
-        projectFrame.src = 'project2.html';
+      case 'ppt':
+        projectFrame.src = 'ppt.html';
         break;
       case 'project3':
         projectFrame.src = 'project3.html';

@@ -9,6 +9,22 @@
   <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
   <!-- 메인 스타일시트 -->
   <link rel="stylesheet" href="{{ url_for('static', filename='css/main.css') }}">
+  <style>
+    .card {
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+    .card-body {
+        padding: 1.5rem;
+    }
+    .img-fluid {
+        border: 1px solid #ddd;
+        border-radius: 4px;
+    }
+    .card-text {
+        white-space: pre-line;
+        line-height: 1.6;
+    }
+  </style>
 </head>
 <body>
   <!-- 사이드바 -->
@@ -19,7 +35,7 @@
     </div>
     <ul class="project-list">
       <li class="project-item active" onclick="showProject('assignmenthelper', event)">과제 검토</li>
-      <!--<li class="project-item" onclick="showProject('project2', event)">프로젝트 2</li>-->
+      <li class="project-item" onclick="showProject('ppt', event)">PPT 분석</li>
       <!--<li class="project-item" onclick="showProject('project3', event)">프로젝트 3</li>-->
       <!--<li class="project-item" onclick="showProject('project4', event)">프로젝트 4</li>-->
     </ul>
@@ -34,12 +50,32 @@
     <iframe id="projectFrame" class="project-iframe" src="{{ url_for('assignmenthelper') }}"></iframe>
   </div>
 
+  <div id="results" class="mt-4">
+    {% for result in results %}
+    <div class="card mb-3">
+        <div class="card-body">
+            <div class="row">
+                <div class="col-md-4">
+                    <img src="{{ result.image }}" class="img-fluid" alt="Page {{ result.page }}">
+                    <p class="text-center mt-2">Page {{ result.page }}</p>
+                </div>
+                <div class="col-md-8">
+                    <h5 class="card-title">요약 내용</h5>
+                    <p class="card-text">{{ result.summary }}</p>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endfor %}
+  </div>
+
   <!-- 메인 스크립트 -->
   <script src="{{ url_for('static', filename='js/main.js') }}"></script>
   <script>
     // 프로젝트 라우트 매핑 (Flask 라우트를 사용)
     const projectRoutes = {
       'assignmenthelper': "{{ url_for('assignmenthelper') }}",
+      'ppt': "{{ url_for('ppt') }}",
     };
 
     function toggleSidebar() {
