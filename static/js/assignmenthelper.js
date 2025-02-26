@@ -55,7 +55,7 @@ document.addEventListener('DOMContentLoaded', () => {
             text: text,
             style: style,
             tones: tones
-        });
+        }); //디버깅 코드
 
         const tonesParam = encodeURIComponent(tones.join(','));
         fetch(`/getchat?question=${encodeURIComponent(text)}&selected_tones=${tonesParam}&style=${encodeURIComponent(style)}`)

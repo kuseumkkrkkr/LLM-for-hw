@@ -1,152 +1,120 @@
 body {
-    font-family: 'Segoe UI', sans-serif;
-    background-color: #f4f4f4;
-    margin: 0;
-    padding: 20px;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    min-height: 100vh;
-  }
-  
+  font-family: 'Segoe UI', sans-serif;
+  background-color: #f4f4f4;
+  margin: 0;
+  padding: 20px;
+}
+.container {
+  background: white;
+  padding: 25px;
+  border-radius: 8px;
+  box-shadow: 0px 0px 10px rgba(0,0,0,0.1);
+  max-width: 1000px;
+  margin: auto;
+}
+.left-panel, .right-panel {
+  display: inline-block;
+  vertical-align: top;
+}
+.left-panel {
+  width: 60%;
+}
+.right-panel {
+  width: 40%;
+  border-left: 1px solid #ddd;
+  padding-left: 25px;
+}
+.input-section {
+  margin-top: 20px;
+}
+.input-section input[type="file"] {
+  width: 100%;
+  padding: 10px;
+  border: 1px solid #ddd;
+  border-radius: 5px;
+  margin-bottom: 15px;
+  box-sizing: border-box;
+}
+.controls {
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+  margin-bottom: 20px;
+}
+select,
+button {
+  width: 100%;
+  padding: 10px;
+  border-radius: 5px;
+  border: 1px solid #ddd;
+  font-size: 14px;
+}
+button {
+  background-color: #007bff;
+  color: white;
+  border: none;
+  cursor: pointer;
+  transition: background-color 0.3s;
+  font-weight: bold;
+}
+button:hover {
+  background-color: #0056b3;
+}
+.features {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 15px;
+}
+.feature-card {
+  padding: 15px;
+  border: 1px solid #ddd;
+  border-radius: 5px;
+  background-color: white;
+}
+.feature-card h3 {
+  margin: 0 0 10px 0;
+  font-size: 14px;
+  color: #333;
+}
+.feature-card p {
+  margin: 0;
+  font-size: 13px;
+  color: #666;
+}
+h1, h2, h3 {
+  margin: 0 0 15px 0;
+  color: #333;
+}
+/* 진행률 게이지 스타일 */
+#progress-bar {
+  width: 100%;
+  background-color: #ddd;
+  border-radius: 5px;
+  overflow: hidden;
+  margin: 20px auto;
+  height: 20px;
+  max-width: 500px;
+}
+#progress-fill {
+  width: 0%;
+  height: 100%;
+  background-color: #007bff;
+  transition: width 0.3s;
+}
+@media (max-width: 768px) {
   .container {
-    background: white;
-    padding: 25px;
-    border-radius: 8px;
-    box-shadow: 0px 0px 10px rgba(0, 0, 0, 0.1);
-    width: 80%;
-    max-width: 1000px;
-  }
-  
-  /* 제목을 컨테이너 안 상단에 배치 */
-  .container h1 {
-    margin-top: 0;
-    margin-bottom: 20px;
-    text-align: left;
-    color: #333;
-  }
-  
-  .content {
-    display: flex;
-    gap: 25px;
-  }
-  
-  .left-panel {
-    width: 60%;
-    display: flex;
-    flex-direction: column;
-  }
-  
-  .right-panel {
-    width: 40%;
-    display: flex;
-    flex-direction: column;
-    gap: 20px;
-  }
-  
-  /* 파일 미리보기 영역 */
-  #viewer {
-    border: 1px solid #ddd;
-    padding: 20px;
-    min-height: 300px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    border-radius: 5px;
-    background-color: #fff;
-    margin-bottom: 20px;
-  }
-  
-  /* 버튼 컨테이너 (세로 방향 기본) */
-  .buttons-container {
-    display: flex;
-    flex-direction: column;
-    gap: 10px;
-  }
-  
-  /* 가로 배치할 버튼 그룹 */
-  .horizontal-buttons {
-    display: flex;
-    gap: 10px;
-  }
-  
-  /* 기본 버튼 스타일 */
-  button {
-    width: 100%;
-    padding: 10px;
-    border-radius: 5px;
-    border: none;
-    background-color: #007bff;
-    color: white;
-    font-size: 14px;
-    font-weight: bold;
-    cursor: pointer;
-    transition: background-color 0.3s;
-  }
-  
-  /* horizontal-buttons 내부 버튼은 가로 배치로 재정의 */
-  .horizontal-buttons button {
-    width: auto;
-    flex: 1;
-  }
-  
-  button:hover {
-    background-color: #0056b3;
-  }
-  
-  /* 파일 삭제 버튼 스타일 */
-  #fileDeleteBtn {
-    background-color: #dc3545;
-  }
-  
-  #fileDeleteBtn:hover {
-    background-color: #a71d2a;
-  }
-  
-  #file-name {
-    font-size: 14px;
-    color: #333;
-    text-align: center;
-  }
-  
-  /* 파일 입력 숨기기 */
-  input[type="file"] {
-    display: none;
-  }
-  
-  /* 오른쪽 패널의 섹션 제목 및 왼쪽 패널의 파일 미리보기 소제목 */
-  .right-panel h3, .left-panel h3 {
-    margin: 0 0 5px 0;
-    color: #333;
-  }
-  
-  /* 오른쪽 텍스트 상자 스타일 (높이를 늘림) */
-  .right-panel textarea {
-    width: 100%;
-    min-height: 250px;
+    width: 95%;
     padding: 15px;
-    border: 1px solid #ddd;
-    border-radius: 5px;
-    resize: none; /* 사용자가 드래그하여 크기 변경 불가 */
-    font-size: 14px;
-    box-sizing: border-box;
-    overflow-y: auto;
-    background-color: #fff;
-    color: #333;
   }
-  
-  @media (max-width: 768px) {
-    .content {
-      flex-direction: column;
-    }
-    
-    .left-panel, .right-panel {
-      width: 100%;
-    }
-    
-    .right-panel {
-      border-top: 1px solid #ddd;
-      padding-top: 20px;
-      margin-top: 20px;
-    }
+  .left-panel, .right-panel {
+    width: 100%;
+    display: block;
+    padding: 0;
+    border: none;
   }
+  .right-panel {
+    border-top: 1px solid #ddd;
+    padding-top: 20px;
+    margin-top: 20px;
+  }
+}

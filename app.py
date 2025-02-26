@@ -1,8 +1,116 @@
-from flask import Flask, render_template, Response, request, jsonify
+from flask import Flask, render_template, Response, request, jsonify, render_template_string
 from google import genai #AI 호출
 from pydantic import BaseModel #baseline 모델 활용(최적화화)
 from typing import List
-import json
+import json 
+#여기까지 텍스트 분석용 라이브러리리 (저기 위에 render_template_string 라이브러리 제외외)
+
+#여기는 pdf 분석용 라이브러리리
+import os
+import uuid #고유 식별자 없으면 인터넷 느린 그 순간 남의 파일 분석당함
+#다만 주의를 좀 해줘야 하는 부분이 지금 상태로는 최대 10개 소켓만 있는상태임
+#2025-02-26 10:15:29,696 - INFO - AFC is enabled with max remote calls: 10 <-실행하면 이렇게 뜰거임
+
+from google.genai import types
+import base64
+import logging #디버그 코드 (나중에 빼고 난 다음 다른것도 없애애)
+import fitz #pdf 파일 분석용
+#=================================================
+logging.basicConfig(level=logging.DEBUG, format="%(asctime)s - %(levelname)s - %(message)s")
+#just for debug 나중에 제거거
+
+#=================================================
+#API 키 유출하면 죽는다
+client = genai.Client(api_key="AIzaSyD_9V2Yk8nflCNbIi7UIaFaulDv3OO14_s")
+#=================================================
+#API키 env 파일로 관리해야하는데 quick build 라서 잠시놔둠
+
+
+
+#지정함수 패키지 (pdf분석용)========================
+#스마트 분석 : pdf OCR 을 gemini api가 하는 부분으로 입출력에 상당한 시간이 소모됨
+def analyze_smart(pdf_path):
+    logging.debug("스마트 분석 시작: %s", pdf_path)
+    results = []
+    try:
+        doc = fitz.open(pdf_path)  # PDF 파일 열기
+        logging.debug("PDF 페이지 수: %d", doc.page_count) 
+        for i in range(doc.page_count):
+            page = doc.load_page(i)  # 페이지 로드
+            pix = page.get_pixmap(matrix=fitz.Matrix(2, 2))  # dpi 업스케일링 적용
+            image_bytes = pix.tobytes("jpeg")  # 이미지 바이트 변환
+            image_base64 = base64.b64encode(image_bytes).decode("utf-8")  # base64 인코딩
+
+            # Gemini API 호출: types.Part를 사용해 이미지 데이터를 전달함
+            logging.debug("페이지 %d: Gemini API 호출 시작", i+1)
+            try:
+                image_part = types.Part.from_bytes(data=image_bytes, mime_type="image/jpeg")
+                response = client.models.generate_content(
+                    model="gemini-2.0-flash-exp",
+
+                    #================================================= 프롬포트 작성
+                    contents=["이 이미지의 내용을 반드시 한글로 요약해줘.", image_part]
+                    #================================================= 
+                )
+
+                summary = response.text if response else "요약 실패"
+                logging.debug("페이지 %d: 요약 완료", i+1)
+            except Exception as e:
+                logging.error("Gemini API 호출 오류: %s", str(e))
+                summary = f"요약 실패: {str(e)}"
+
+            results.append({
+                'page': i+1,
+                'summary': summary,
+                'image_data': f"data:image/jpeg;base64,{image_base64}"
+            })
+    except Exception as e:
+        logging.error("PDF 처리 오류: %s", str(e))
+        return {"error": str(e)}
+    finally:
+        if 'doc' in locals():
+            doc.close()
+    return results
+#=================================================
+#스피드 분석 : 이미지를 미리 파이썬이 OCR을 하고 텍스트 입출력으로만 하는 방식으로 종전보다 속도가 빠름
+def analyze_speed(pdf_path):
+    logging.debug("스피드 분석 시작: %s", pdf_path)
+    results = []
+    try:
+        doc = fitz.open(pdf_path)
+        logging.debug("PDF 페이지 수: %d", doc.page_count)
+        for i in range(doc.page_count):
+            page = doc.load_page(i)
+            text = page.get_text("text")
+            logging.debug("페이지 %d: 추출 텍스트 (최대 100자): %s", i+1, text[:100])
+            #여기까지 텍스트 추출
+            
+            response = client.models.generate_content(
+              model="gemini-2.0-flash", #여기서는 텍스트만 결국 들어가서 2.0모델이 더 좋음음
+              
+              #================================================= 프롬포트 작성
+              contents=  "다음 텍스트를 요약해줘:\n" + text) 
+              #================================================= 
+            summary = response.text if response else "요약 실패"
+            pix = page.get_pixmap(matrix=fitz.Matrix(2, 2))
+            image_bytes = pix.tobytes("jpeg") 
+            image_base64 = base64.b64encode(image_bytes).decode("utf-8")
+            results.append({
+                "page": i+1,
+                "summary": summary,
+                "image_data": f"data:image/jpeg;base64,{image_base64}"
+            })
+            logging.debug("페이지 %d: 스피드 분석 완료", i+1)
+    except Exception as e:
+        logging.exception("스피드 분석 오류:")
+    finally:
+        if 'doc' in locals():
+            doc.close()
+    return results
+#================================================= 
+#여기까지 분석함수 박스인데 제발 부탁하는게 소켓이 최대 10개까지만 들어가져
+#나중에 호출 제한횟수를 풀어야 분석이 가능할것같고, 10개 초과 시 분석 실패로 넘어가는게 아니라
+#바로 404가 나버리니까 그건 차후에 구현할 일일
 
 #이거 제발 없애지마================================
 app = Flask(__name__)
@@ -17,8 +125,19 @@ def assignmenthelper():
 @app.route('/ppt')
 def ppt():
     return render_template('ppt.html')
-#=================================================
 
+#왜 pptresult는 안하냐 하는데 그거 라우팅 연속 두번하면 메모리 튕김
+#=================================================
+@app.errorhandler(413)
+def too_large(e):
+    return "파일 크기는 최대 100MB까지 업로드 가능합니다.", 413 #오류표출용용
+#=================================================
+#업로드할 파일을 보는 부분임 로직 달라지면 안먹히니까 함부로 수정하지마
+app.config["UPLOAD_FOLDER"] = "uploads"
+# 100MB 이상 업로드 불가능한 코드 100 × 1024 × 1024 = 104,857,600 Bytes
+app.config["MAX_CONTENT_LENGTH"] = 100 * 1024 * 1024  
+os.makedirs(app.config["UPLOAD_FOLDER"], exist_ok=True)
+#=================================================
 
 
 #================================================= 프롬포트를 구성하는 클래스
@@ -39,8 +158,8 @@ class TextAnalysis(BaseModel): #없어지면 안되는 코드 이거 죽이면 �
     improvement_suggestions: ImprovementSuggestions
     structure_analysis: StructureAnalysis
 #=================================================
-#API 키 유출하면 죽는다
-client = genai.Client(api_key="AIzaSyD_9V2Yk8nflCNbIi7UIaFaulDv3OO14_s")
+
+
 #=================================================
 # 수정가능한 또다른 부분, 아래쪽애 프롬포트 구성만 바꾸셈
 # 다른 코드 건드리면 작동안함
@@ -152,11 +271,49 @@ def getchat():
 #================================================= 코드끝
 
 
-#문법 검사 함수=================================================
+#================================================= 프리젠테이션 프로세스 처리 
+#여긴 디버그 코드가 많아서 굳이 주석처리 안함함
+@app.route("/pptresult", methods=["GET", "POST"])
+def pptresult():
+    if request.method == "POST":
+        logging.debug("POST 요청 수신됨")
+        if "pdf" not in request.files:
+            logging.error("파일 업로드 없음")
+            return "PDF 파일이 업로드되지 않았습니다.", 400
+        pdf_file = request.files["pdf"]
+        if pdf_file.filename == "":
+            logging.error("파일 미선택")
+            return "파일을 선택해 주세요.", 400
+        analysis_type = request.form.get("analysis_type")
+        if analysis_type not in ["smart", "speed"]:
+            logging.error("잘못된 분석 유형: %s", analysis_type)
+            return "유효하지 않은 분석 유형입니다.", 400
+        
+        pdf_filename = str(uuid.uuid4()) + ".pdf"
+        pdf_path = os.path.join(app.config["UPLOAD_FOLDER"], pdf_filename)
+        pdf_file.save(pdf_path)
+        logging.debug("PDF 저장됨: %s", pdf_path)
+        
+        if analysis_type == "smart":
+            results = analyze_smart(pdf_path)
+        else:
+            results = analyze_speed(pdf_path)
+        
+        # 분석 완료 후 즉시 파일 삭제
+        if os.path.exists(pdf_path):
+            os.remove(pdf_path)
+            logging.debug("PDF 삭제됨: %s", pdf_path) #없애지마라
+        
+        return render_template('pptresult.html', results=results)
+    return render_template('ppt.html')
+#=================================================
 
+#문법 검사 함수=================================================
+#호출 안할듯듯
 
 # 밑에 이부분 없애면 아예 Run 실행이 안됨됨
 if __name__ == '__main__':
+    logging.debug("서버 실행 시작")
     app.run(debug=True)
 
 

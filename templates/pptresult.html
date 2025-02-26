@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <title>분석 결과</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/pptresult.css') }}">
+</head>
+<body>
+  <div class="container">
+    <h1>분석 결과</h1>
+    {% for page in results %}
+      <div class="result">
+        <h3>페이지 {{ page.page }}</h3>
+        {% if page.image_data %}
+          <img src="{{ page.image_data }}" alt="페이지 이미지">
+        {% endif %}
+        <p>{{ page.summary }}</p>
+      </div>
+    {% endfor %}
+    <a href="#" onclick="window.parent.document.getElementById('projectFrame').src='{{ url_for('ppt') }}'; return false;">다시 업로드</a> 
+  </div>
+</body>
+</html>
+
+<!--저기 나는 오류는 내부에 문법적으로 문제는 없는데 편집기 오류임 그냥 개무시 ㄱ-->
