@@ -21,7 +21,7 @@ logging.basicConfig(level=logging.DEBUG, format="%(asctime)s - %(levelname)s - %
 
 #=================================================
 #API 키 유출하면 죽는다
-client = genai.Client(api_key="AIzaSyD_9V2Yk8nflCNbIi7UIaFaulDv3OO14_s")
+client = genai.Client(api_key="APIKEY")
 #=================================================
 #API키 env 파일로 관리해야하는데 quick build 라서 잠시놔둠
 
